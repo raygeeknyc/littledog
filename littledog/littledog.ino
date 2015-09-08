@@ -12,12 +12,13 @@
 
 #include <SoftwareServo.h>
 SoftwareServo frontservo,backservo;
-#define left_full 60
-#define right_full 120
-#define center 90
+const int gait_range=70;
+const int center=90;
+const int left_full=center-(gait_range/2);
+const int right_full=center+(gait_range/2);
 
-const byte left_part = (left_full + ((right_full - left_full) / 5));
-const byte right_part = (right_full - ((right_full - left_full) / 5));
+const byte left_part = center-(gait_range/5);
+const byte right_part = center+(gait_range/5);
 
 #define front_pin 9
 #define rear_pin 10
@@ -26,7 +27,7 @@ const byte right_part = (right_full - ((right_full - left_full) / 5));
 #define echo_pin 7
 
 #define post_step_delay 15
-#define pre_step_delay 100
+#define pre_step_delay 30
 #define max_refresh_delay 25
 
 int led_level;
@@ -44,6 +45,7 @@ unsigned long int shine_end_at;
 #define default_distance 100
 
 // {forward leg's servo's positition, rear leg's servo's position, ...}
+char no_steps[] = {};
 char forwards_steps[] =   {
   left_full, left_part, right_full, right_part, left_full, left_part, right_full, right_part};
 char backwards_steps[] =  {
@@ -167,6 +169,11 @@ void setup() {
   Serial.begin(9600);
   Serial.println("setup");
 #endif 
+  frontservo.attach(front_pin);
+  backservo.attach(rear_pin);
+  frontservo.write(center);
+  backservo.write(center);
+
   pinMode(led_pin, OUTPUT);
   for (int i=0; i<4; i++) {
     digitalWrite(led_pin, HIGH);
@@ -179,8 +186,6 @@ void setup() {
   steps_since_reversal = 0;
   steps_since_forward = 0;
   steps_since_turn = 0;
-  frontservo.attach(front_pin);
-  backservo.attach(rear_pin);
   pinMode(trig_pin, OUTPUT);
   pinMode(echo_pin, INPUT);
   shine_end_at = 0;
@@ -191,7 +196,7 @@ void setup() {
 }
 
 void loop() {
-  char *current_gait;
+  char *current_gait = no_steps;
   // We need to refresh software servos every 50ms or more so we cannot just have an aribitrarily long delay here
   for (int i=0; i<pre_step_delay; i+= (pre_step_delay / max_refresh_delay)) {
     expire_led();
