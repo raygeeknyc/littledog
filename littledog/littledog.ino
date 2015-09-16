@@ -20,11 +20,22 @@ const int right_full=center+(gait_range/2);
 const byte left_part = center-(gait_range/5);
 const byte right_part = center+(gait_range/5);
 
+#define _ATTINY44_NOT
+
+#ifdef _ATTINY44
 #define front_pin 9
 #define rear_pin 10
 #define led_pin 8
 #define trig_pin 6
 #define echo_pin 7
+#endif
+#ifndef _ATTINY44
+#define front_pin 3
+#define rear_pin 4
+#define led_pin 0
+#define trig_pin 1
+#define echo_pin 2
+#endif
 
 #define post_step_delay 15
 #define pre_step_delay 30
