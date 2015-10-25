@@ -9,9 +9,9 @@
  */
 
 //#define _DEBUG
+#include <Servo.h>
 
-#include <SoftwareServo.h>
-SoftwareServo frontservo,backservo;
+Servo frontservo,backservo;
 const int gait_range=70;
 const int center=90;
 const int left_full=center-(gait_range/2);
@@ -20,22 +20,11 @@ const int right_full=center+(gait_range/2);
 const byte left_part = center-(gait_range/5);
 const byte right_part = center+(gait_range/5);
 
-#define _ATTINY44_NOT
-
-#ifdef _ATTINY44
-#define front_pin 9
-#define rear_pin 10
-#define led_pin 8
-#define trig_pin 6
-#define echo_pin 7
-#endif
-#ifndef _ATTINY44
-#define front_pin 3
-#define rear_pin 4
-#define led_pin 0
-#define trig_pin 1
-#define echo_pin 2
-#endif
+#define PIN_SERVO_FRONT 9
+#define PIN_SERVO_REAR 10
+#define PIN_LED 8
+#define PIN_PING_TRIGGER 6
+#define  PIN_PING_ECHO 7
 
 #define post_step_delay 15
 #define pre_step_delay 30
@@ -63,6 +52,7 @@ char backwards_steps[] =  {
   right_part, right_full, left_part, left_full, right_part, right_full, left_part, left_full};
 char turn_fwd_steps[] =   {
   left_full, left_part, left_full, right_full, right_full, right_part, left_part, right_part};
+char *current_gait = no_steps;
 
 int step_seq;
 int steps_since_reversal, steps_since_forward, steps_since_turn;
@@ -76,16 +66,91 @@ int walking_direction;
 #define backwards_limit 8
 #define turn_limit 8
 
-int get_distance() {
-  digitalWrite(trig_pin, LOW); 
+void setSensorBaseLevels() {
+  prev_light_ = getLightLevel();
+  prev_distance_ = getDistance();
+}
+
+void sleepUntilWoken() {
+  setSensorBaseLevels();
+  while (sleeping_) {
+    delay(SLEEP_INTERVAL);
+    periodicRefresh();
+    if (activityDetected()) {
+      wakeUp();
+    }
+  }
+  awake_until_ = millis()+WAKE_DUR;
+}
+
+void periodicRefresh() {
+    refreshSensors();
+    expireLed();
+    expireSound();
+}
+
+void wakeUp() {
+  sleeping_ = false;
+  chirp();
+  blink();
+}
+
+void refreshSensors() {
+  prev_light_ = light_;
+  prev_distance_ = distance_;
+  light_ = getLightLevel();
+  light_asof_ = millis();
+  distance_ = getDistance();
+  distance_asof = millis();
+}
+
+int getLightLevel() {
+  int sum = 0, min = 9999; max = -1;
+  for (int i=0; i< LIGHT_SAMPLES; i++) {
+    int sample = analogRead(PIN_LIGHT);
+    if (sample<min) min=sample;
+    if (sample>max) max=sample;
+    sum += sample;
+  }
+  sum -= (min + max);
+  return (sum/3);
+}
+
+int getDistance() {
+  int sum = 0, min = 9999; max = -1;
+  for (int i=0; i< PING_SAMPLES; i++) {
+    int sample = getPing();
+    if (sample<min) min=sample;
+    if (sample>max) max=sample;
+    sum += sample;
+  }
+  sum -= (min + max);
+  return (sum/3);
+}
+
+boolean  activityDetected() {
+  if (abs(light_ - prev_light_) > THRESHOLD_LIGHT_CHANGE) {
+    return true;
+  }
+  if (abs(distance_ - prev_distance_) > THRESHOLD_DISTANCE_CHANGED) {
+    return true;
+  }
+  return false;
+}
+
+
+/// here from notes
+
+int getPing() {
+  digitalWrite(PIN_PING_TRIGGER, LOW); 
   delayMicroseconds(2); 
 
-  digitalWrite(trig_pin, HIGH);
+  digitalWrite(PIN_PING_TRIGGER, HIGH);
   delayMicroseconds(10); 
 
-  digitalWrite(trig_pin, LOW);
+  digitalWrite(PIN_PING_TRIGGER, LOW);
 
-  int duration = pulseIn(echo_pin, HIGH);
+  int duration = pulseIn(PIN_PING_ECHO, HIGH);
 
   if (duration <= 0) {
 #ifdef _DEBUG
@@ -109,7 +174,7 @@ void start_led_pulsing() {
   led_level = led_max;
   led_dir = false;
   led_step_at = 0;
-  analogWrite(led_pin, led_level);
+  analogWrite(PIN_LED, led_level);
   pulsing = true;
 }
 
@@ -118,14 +183,14 @@ void stop_led_pulsing() {
   Serial.println("LED stop pulsing ");
 #endif
   led_level = led_off;
-  analogWrite(led_pin, led_level);
+  analogWrite(PIN_LED, led_level);
   pulsing = false;
 }
 
 void startLedShining() {
   stop_led_pulsing();
   shine_end_at = millis() + shine_duration;
-  analogWrite(led_pin, led_max);
+  analogWrite(PIN_LED, led_max);
 #ifdef _DEBUG
   Serial.println("LED shining ");
 #endif
@@ -136,7 +201,7 @@ void stopLedShining() {
   Serial.println("LED stop shining ");
 #endif
   shine_end_at = 0;
-  analogWrite(led_pin, led_max);
+  analogWrite(PIN_LED, led_max);
 }
 
 void expire_led() {
@@ -168,7 +233,7 @@ void expire_led() {
       led_dir = true;
     }
   }
-  analogWrite(led_pin, led_level);
+  analogWrite(PIN_LED, led_level);
 }
 
 boolean is_shining() {
@@ -180,16 +245,16 @@ void setup() {
   Serial.begin(9600);
   Serial.println("setup");
 #endif 
-  frontservo.attach(front_pin);
-  backservo.attach(rear_pin);
+  frontservo.attach(PIN_SERVO_FRONT);
+  backservo.attach(PIN_SERVO_REAR);
   frontservo.write(center);
   backservo.write(center);
 
-  pinMode(led_pin, OUTPUT);
+  pinMode(PIN_LED, OUTPUT);
   for (int i=0; i<4; i++) {
-    digitalWrite(led_pin, HIGH);
+    digitalWrite(PIN_LED, HIGH);
     delay(500);
-    digitalWrite(led_pin, LOW);
+    digitalWrite(PIN_LED, LOW);
     delay(200);
   }    
   walking_direction = forwards;
@@ -197,8 +262,8 @@ void setup() {
   steps_since_reversal = 0;
   steps_since_forward = 0;
   steps_since_turn = 0;
-  pinMode(trig_pin, OUTPUT);
-  pinMode(echo_pin, INPUT);
+  pinMode(PIN_PING_TRIGGER, OUTPUT);
+  pinMode(PIN_PING_ECHO, INPUT);
   shine_end_at = 0;
   start_led_pulsing();
 #ifdef _DEBUG
@@ -207,14 +272,16 @@ void setup() {
 }
 
 void loop() {
-  char *current_gait = no_steps;
-  // We need to refresh software servos every 50ms or more so we cannot just have an aribitrarily long delay here
-  for (int i=0; i<pre_step_delay; i+= (pre_step_delay / max_refresh_delay)) {
-    expire_led();
-    delay(max_refresh_delay);
-    frontservo.refresh();
-    backservo.refresh();
+  periodicRefresh();
+  if (timeToSleep()) {
+    sleepUntilWoken();
+  } else {
+    roam();
   }
+}
+
+void roam() {
+  delay(pre_step_delay);
 #ifdef _DEBUG
   Serial.print("walking direction ");
   Serial.println(walking_direction);
