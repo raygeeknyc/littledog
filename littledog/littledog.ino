@@ -1,6 +1,6 @@
 /*
  * @author("Raymond Blum" <raymond@insanegiantrobots.com>)
- * targeted for an ATTiny44u but should work on any Arduino compatible controller
+ * Targeted for an adafruit pro trinket but should work on any Arduino compatible controller
  *
  *******************
  Littledog by Raymond Blum is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
