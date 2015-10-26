@@ -180,24 +180,24 @@ int getPing() {
   int duration = pulseIn(PIN_PING_ECHO, HIGH);
 
   if (duration <= 0) {
-#ifdef _DEBUG
-  Serial.println("default distance ");
-#endif
+    #ifdef _DEBUG
+    Serial.println("default distance ");
+    #endif
     return default_distance;
   }
   //Calculate the distance (in cm) based on the speed of sound.
   float HR_dist = duration/58.2;
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.print("distance ");
   Serial.println(HR_dist);
-#endif
+  #endif
   return int(HR_dist);
 }
 
 void start_led_pulsing() {
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("LED pulsing ");
-#endif
+  #endif
   led_level_ = LED_MAX;
   led_dir_ = false;
   led_step_at = 0;
@@ -206,9 +206,9 @@ void start_led_pulsing() {
 }
 
 void stopLedPulsing() {
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("LED stop pulsing ");
-#endif
+  #endif
   led_level_ = LED_OFF;
   analogWrite(PIN_LED, led_level_);
   led_pulsing_ = false;
@@ -216,24 +216,24 @@ void stopLedPulsing() {
 
 void chirp() {
   tone(PIN_SPEAKER, BEEP_TONE, BEEP_DURATION);
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("beep");
-#endif
+  #endif
 }
 
 void blink() {
   stopLedPulsing();
   analogWrite(PIN_LED, LED_MAX);
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("blink");
-#endif
-shining_ = 1;
+  #endif
+  shining_ = 1;
 }
 
 void stopLedShining() {
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("LED stop shining ");
-#endif
+  #endif
   shine_until_ = 0;
   analogWrite(PIN_LED, LED_MAX);
   shining_ = 0;
@@ -280,10 +280,10 @@ boolean is_shining() {
 }
 
 void setup() {
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.begin(9600);
   Serial.println("setup");
-#endif 
+  #endif 
   frontservo.attach(PIN_SERVO_FRONT);
   backservo.attach(PIN_SERVO_REAR);
   frontservo.write(center);
@@ -305,9 +305,9 @@ void setup() {
   pinMode(PIN_PING_ECHO, INPUT);
   shine_end_at = 0;
   start_led_pulsing();
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.println("/setup");
-#endif 
+  #endif 
 }
 
 void loop() {
@@ -321,29 +321,29 @@ void loop() {
 
 void roam() {
   delay(pre_step_delay);
-#ifdef _DEBUG
+  #ifdef _DEBUG
   Serial.print("walking direction ");
   Serial.println(walking_direction);
-#endif 
+  #endif 
 
   // Handle walking while in a sequence
   switch (walking_direction) {
   case forwards:
-#ifdef _DEBUG
-  Serial.println("walking fwd");
-#endif 
+    #ifdef _DEBUG
+    Serial.println("walking fwd");
+    #endif 
     current_gait = forwards_steps;
     break;
   case backwards:
-#ifdef _DEBUG
-  Serial.println("walking bwd");
-#endif 
+    #ifdef _DEBUG
+    Serial.println("walking bwd");
+    #endif 
     current_gait = backwards_steps;
     break;
   case turn:
-#ifdef _DEBUG
-  Serial.println("turning");
-#endif 
+    #ifdef _DEBUG
+    Serial.println("turning");
+    #endif 
     current_gait = turn_fwd_steps;
     break;
   }
@@ -364,9 +364,9 @@ void roam() {
 
   // If there's proximity and we're going forward, start backing up, turn off the LED
   if (walking_direction == forwards && getDistance() <= avoidance_threshold_cm) {
-#ifdef _DEBUG
+    #ifdef _DEBUG
     Serial.println("backing up");
-#endif
+    #endif
     walking_direction = backwards;
     steps_since_reversal = 0;
     step_seq = 1;
@@ -375,21 +375,21 @@ void roam() {
 
   // If we're going backwards, limit how long we back up and then blink the LED
   if (walking_direction == backwards && steps_since_reversal > backwards_limit) {
-#ifdef _DEBUG
+    #ifdef _DEBUG
     Serial.println("Done backing up");
-#endif
+    #endif
     if (getDistance() >= avoidance_threshold_cm) {
-#ifdef _DEBUG
+      #ifdef _DEBUG
       Serial.println("Turning");
-#endif
+      #endif
       walking_direction = turn;
       steps_since_turn = 0;
       step_seq = 1;
       blink();
     } else {
-#ifdef _DEBUG
+      #ifdef _DEBUG
       Serial.println("All clear, going fwd");
-#endif
+      #endif
       walking_direction = forwards;
       steps_since_forward = 0;
       step_seq = 1;
@@ -399,9 +399,9 @@ void roam() {
   }
   // If we're turning, limit how long we turn and then go forwards with the LED pulsing
   if ((walking_direction == turn)  && steps_since_turn > turn_limit) {
-#ifdef _DEBUG
+    #ifdef _DEBUG
     Serial.println("Done turning");
-#endif
+    #endif
     walking_direction = forwards;
     steps_since_forward = 0;
     step_seq = 1;
