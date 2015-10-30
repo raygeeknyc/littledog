@@ -8,17 +8,17 @@
  see http://www.insanegiantrobots.com/littledog
  */
 
-//#define _DEBUG
+//#define DEBUG_
 #include <Servo.h>
 
 Servo frontservo,backservo;
-const int gait_range=70;
-const int center=90;
-const int left_full=center-(gait_range/2);
-const int right_full=center+(gait_range/2);
+#define gait_range 70
+#define center 90
+const int LEGS_LEFT_FULL=center-(gait_range/2);
+const int LEGS_RIGHT_FULL=center+(gait_range/2);
 
-const byte left_part = center-(gait_range/5);
-const byte right_part = center+(gait_range/5);
+const byte LEGS_LEFT_PART = center-(gait_range/5);
+const byte LEGS_RIGHT_PART = center+(gait_range/5);
 
 #define SLEEP_INTERVAL 600
 #define WAKE_DUR 10000
@@ -37,9 +37,8 @@ const byte right_part = center+(gait_range/5);
 #define PIN_PING_ECHO 7
 #define PIN_LIGHT 23
 
-#define post_step_delay 15
-#define pre_step_delay 30
-#define max_refresh_delay 25
+#define DELAY_POST_STEP_MS 15
+#define DELAY_PRE_STEP_MS 30
 
 int sleeping_, shining_;
 
@@ -67,28 +66,28 @@ int distance_, prev_distance_;
 // {forward leg's servo's positition, rear leg's servo's position, ...}
 char no_steps[] = {};
 char forwards_steps[] =   {
-  left_full, left_part, right_full, right_part, left_full, left_part, right_full, right_part};
+  LEGS_LEFT_FULL, LEGS_LEFT_PART, LEGS_RIGHT_FULL, LEGS_RIGHT_PART, LEGS_LEFT_FULL, LEGS_LEFT_PART, LEGS_RIGHT_FULL, LEGS_RIGHT_PART};
 char backwards_steps[] =  {
-  right_part, right_full, left_part, left_full, right_part, right_full, left_part, left_full};
+  LEGS_RIGHT_PART, LEGS_RIGHT_FULL, LEGS_LEFT_PART, LEGS_LEFT_FULL, LEGS_RIGHT_PART, LEGS_RIGHT_FULL, LEGS_LEFT_PART, LEGS_LEFT_FULL};
 char turn_fwd_steps[] =   {
-  left_full, left_part, left_full, right_full, right_full, right_part, left_part, right_part};
+  LEGS_LEFT_FULL, LEGS_LEFT_PART, LEGS_LEFT_FULL, LEGS_RIGHT_FULL, LEGS_RIGHT_FULL, LEGS_RIGHT_PART, LEGS_LEFT_PART, LEGS_RIGHT_PART};
 char *current_gait = no_steps;
 
 int step_seq;
 int steps_since_reversal, steps_since_forward, steps_since_turn;
 
 int walking_direction;
-#define forwards 0
-#define backwards 1
+#define FORWARDS 0
+#define BACKWARDS 1
 #define turn 2
 
 #define THRESHOLD_LIGHT_CHANGE 30
 int light_, prev_light_;
 
 #define THRESHOLD_DISTANCE_CHANGED 3
-#define avoidance_threshold_cm 15
-#define backwards_limit 8
-#define turn_limit 8
+#define THRESHOLD_AVOIDANCE_CM 15
+#define LIMIT_BACKWARDS 8
+#define LIMIT_TURNING 8
 
 void setSensorBaseLevels() {
   prev_light_ = getLightLevel();
@@ -180,14 +179,14 @@ int getPing() {
   int duration = pulseIn(PIN_PING_ECHO, HIGH);
 
   if (duration <= 0) {
-    #ifdef _DEBUG
+    #ifdef DEBUG_
     Serial.println("default distance ");
     #endif
     return default_distance;
   }
   //Calculate the distance (in cm) based on the speed of sound.
   float HR_dist = duration/58.2;
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.print("distance ");
   Serial.println(HR_dist);
   #endif
@@ -195,7 +194,7 @@ int getPing() {
 }
 
 void start_led_pulsing() {
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("LED pulsing ");
   #endif
   led_level_ = LED_MAX;
@@ -206,7 +205,7 @@ void start_led_pulsing() {
 }
 
 void stopLedPulsing() {
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("LED stop pulsing ");
   #endif
   led_level_ = LED_OFF;
@@ -216,7 +215,7 @@ void stopLedPulsing() {
 
 void chirp() {
   tone(PIN_SPEAKER, BEEP_TONE, BEEP_DURATION);
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("beep");
   #endif
 }
@@ -224,14 +223,14 @@ void chirp() {
 void blink() {
   stopLedPulsing();
   analogWrite(PIN_LED, LED_MAX);
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("blink");
   #endif
   shining_ = 1;
 }
 
 void stopLedShining() {
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("LED stop shining ");
   #endif
   shine_until_ = 0;
@@ -280,7 +279,7 @@ boolean is_shining() {
 }
 
 void setup() {
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.begin(9600);
   Serial.println("setup");
   #endif 
@@ -296,7 +295,7 @@ void setup() {
     digitalWrite(PIN_LED, LOW);
     delay(200);
   }    
-  walking_direction = forwards;
+  walking_direction = FORWARDS;
   step_seq = 0;
   steps_since_reversal = 0;
   steps_since_forward = 0;
@@ -305,7 +304,7 @@ void setup() {
   pinMode(PIN_PING_ECHO, INPUT);
   shine_end_at = 0;
   start_led_pulsing();
-  #ifdef _DEBUG
+  #ifdef DEBUG_
   Serial.println("/setup");
   #endif 
 }
@@ -320,28 +319,28 @@ void loop() {
 }
 
 void roam() {
-  delay(pre_step_delay);
-  #ifdef _DEBUG
+  delay(DELAY_PRE_STEP_MS);
+  #ifdef DEBUG_
   Serial.print("walking direction ");
   Serial.println(walking_direction);
   #endif 
 
   // Handle walking while in a sequence
   switch (walking_direction) {
-  case forwards:
-    #ifdef _DEBUG
+  case FORWARDS:
+    #ifdef DEBUG_
     Serial.println("walking fwd");
     #endif 
     current_gait = forwards_steps;
     break;
-  case backwards:
-    #ifdef _DEBUG
+  case BACKWARDS:
+    #ifdef DEBUG_
     Serial.println("walking bwd");
     #endif 
     current_gait = backwards_steps;
     break;
   case turn:
-    #ifdef _DEBUG
+    #ifdef DEBUG_
     Serial.println("turning");
     #endif 
     current_gait = turn_fwd_steps;
@@ -350,7 +349,7 @@ void roam() {
   frontservo.write(current_gait[2*step_seq]);
   backservo.write(current_gait[(2*step_seq)+1]);
 
-  delay(post_step_delay);
+  delay(DELAY_POST_STEP_MS);
 
   step_seq += 1;
   steps_since_reversal += 1;
@@ -363,23 +362,23 @@ void roam() {
   }
 
   // If there's proximity and we're going forward, start backing up, turn off the LED
-  if (walking_direction == forwards && getDistance() <= avoidance_threshold_cm) {
-    #ifdef _DEBUG
+  if (walking_direction == FORWARDS && getDistance() <= THRESHOLD_AVOIDANCE_CM) {
+    #ifdef DEBUG_
     Serial.println("backing up");
     #endif
-    walking_direction = backwards;
+    walking_direction = BACKWARDS;
     steps_since_reversal = 0;
     step_seq = 1;
     stopLedPulsing();
   }
 
   // If we're going backwards, limit how long we back up and then blink the LED
-  if (walking_direction == backwards && steps_since_reversal > backwards_limit) {
-    #ifdef _DEBUG
+  if (walking_direction == BACKWARDS && steps_since_reversal > LIMIT_BACKWARDS) {
+    #ifdef DEBUG_
     Serial.println("Done backing up");
     #endif
-    if (getDistance() >= avoidance_threshold_cm) {
-      #ifdef _DEBUG
+    if (getDistance() >= THRESHOLD_AVOIDANCE_CM) {
+      #ifdef DEBUG_
       Serial.println("Turning");
       #endif
       walking_direction = turn;
@@ -387,10 +386,10 @@ void roam() {
       step_seq = 1;
       blink();
     } else {
-      #ifdef _DEBUG
+      #ifdef DEBUG_
       Serial.println("All clear, going fwd");
       #endif
-      walking_direction = forwards;
+      walking_direction = FORWARDS;
       steps_since_forward = 0;
       step_seq = 1;
       stopLedShining();
@@ -398,11 +397,11 @@ void roam() {
     }
   }
   // If we're turning, limit how long we turn and then go forwards with the LED pulsing
-  if ((walking_direction == turn)  && steps_since_turn > turn_limit) {
-    #ifdef _DEBUG
+  if ((walking_direction == turn)  && steps_since_turn > LIMIT_TURNING) {
+    #ifdef DEBUG_
     Serial.println("Done turning");
     #endif
-    walking_direction = forwards;
+    walking_direction = FORWARDS;
     steps_since_forward = 0;
     step_seq = 1;
     stopLedShining();
