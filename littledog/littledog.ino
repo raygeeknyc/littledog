@@ -8,7 +8,7 @@
  see http://www.insanegiantrobots.com/littledog
  */
 
-//#define DEBUG_
+#define DEBUG_
 #include <Servo.h>
 
 Servo frontservo,backservo;
