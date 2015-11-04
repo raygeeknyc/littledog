@@ -25,7 +25,6 @@ const byte LEGS_RIGHT_PART = center+(gait_range/5);
 
 #define BEEP_DURATION 700
 #define BEEP_TONE 350
-#define PIN_SPEAKER 22
 
 #define PING_SAMPLES 5
 #define LIGHT_SAMPLES 5
@@ -33,9 +32,10 @@ const byte LEGS_RIGHT_PART = center+(gait_range/5);
 #define PIN_SERVO_FRONT 9
 #define PIN_SERVO_REAR 10
 #define PIN_LED 8
-#define PIN_PING_TRIGGER 6
-#define PIN_PING_ECHO 7
-#define PIN_LIGHT 23
+#define PIN_PING_TRIGGER 5
+#define PIN_PING_ECHO 6
+#define PIN_CDS 2
+#define PIN_SPEAKER 4
 
 #define DELAY_POST_STEP_MS 15
 #define DELAY_PRE_STEP_MS 30
@@ -133,7 +133,7 @@ void refreshSensors() {
 int getLightLevel() {
   int sum = 0, min = 9999, max = -1;
   for (int i=0; i< LIGHT_SAMPLES; i++) {
-    int sample = analogRead(PIN_LIGHT);
+    int sample = analogRead(PIN_CDS);
     if (sample<min) min=sample;
     if (sample>max) max=sample;
     sum += sample;
@@ -283,25 +283,27 @@ void setup() {
   Serial.begin(9600);
   Serial.println("setup");
   #endif 
-  frontservo.attach(PIN_SERVO_FRONT);
-  backservo.attach(PIN_SERVO_REAR);
-  frontservo.write(center);
-  backservo.write(center);
-
   pinMode(PIN_LED, OUTPUT);
+  pinMode(PIN_PING_TRIGGER, OUTPUT);
+  pinMode(PIN_SPEAKER, OUTPUT);
+  pinMode(PIN_PING_ECHO, INPUT);
+  pinMode(PIN_CDS, INPUT);
   for (int i=0; i<4; i++) {
     digitalWrite(PIN_LED, HIGH);
     delay(500);
     digitalWrite(PIN_LED, LOW);
     delay(200);
   }    
+  frontservo.attach(PIN_SERVO_FRONT);
+  backservo.attach(PIN_SERVO_REAR);
+  frontservo.write(center);
+  backservo.write(center);
+
   walking_direction = FORWARDS;
   step_seq = 0;
   steps_since_reversal = 0;
   steps_since_forward = 0;
   steps_since_turn = 0;
-  pinMode(PIN_PING_TRIGGER, OUTPUT);
-  pinMode(PIN_PING_ECHO, INPUT);
   shine_end_at = 0;
   start_led_pulsing();
   #ifdef DEBUG_
@@ -311,6 +313,8 @@ void setup() {
 
 void loop() {
   periodicRefresh();
+  return; // testing
+  
   if (isTimeToSleep()) {
     sleepUntilWoken();
   } else {
