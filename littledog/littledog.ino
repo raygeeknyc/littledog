@@ -8,7 +8,7 @@
  see http://www.insanegiantrobots.com/littledog
  */
 
-#define DEBUG_
+#define _NO_DEBUG_
 #include <Servo.h>
 
 Servo frontservo,backservo;
@@ -31,19 +31,19 @@ const byte LEGS_RIGHT_PART = center+(gait_range/5);
 
 #define PIN_SERVO_FRONT 9
 #define PIN_SERVO_REAR 10
-#define PIN_LED 8
+#define PIN_LED 6
 #define PIN_PING_TRIGGER 5
 #define PIN_PING_ECHO 6
-#define PIN_CDS 2
+#define PIN_CDS A3
 #define PIN_SPEAKER 4
 
 #define DELAY_POST_STEP_MS 15
 #define DELAY_PRE_STEP_MS 30
 
-int sleeping_, shining_;
+int sleeping_, led_shining_;
 
 unsigned long int awake_until_;
-unsigned long int shine_until_;
+unsigned long int led_shine_until_;
 
 
 unsigned long int light_asof_, distance_asof_;
@@ -58,7 +58,6 @@ bool led_dir_;
 #define LED_STEP_DURATION 80
 #define LED_BLINK_DURATION 4000
 unsigned long int led_step_at;
-unsigned long int shine_end_at;
 
 #define default_distance 100
 int distance_, prev_distance_;
@@ -118,10 +117,11 @@ void periodicRefresh() {
 void wakeUp() {
   sleeping_ = false;
   chirp();
-  blink();
+  blinkLed();
 }
 
 void refreshSensors() {
+  return; // TESTING
   prev_light_ = light_;
   prev_distance_ = distance_;
   light_ = getLightLevel();
@@ -193,15 +193,16 @@ int getPing() {
   return int(HR_dist);
 }
 
-void start_led_pulsing() {
+void startLedPulsing() {
   #ifdef DEBUG_
   Serial.println("LED pulsing ");
   #endif
-  led_level_ = LED_MAX;
-  led_dir_ = false;
+  led_level_ = LED_MIN;
+  led_dir_ = 1;
   led_step_at = 0;
   analogWrite(PIN_LED, led_level_);
   led_pulsing_ = true;
+  led_shining_ = false;
 }
 
 void stopLedPulsing() {
@@ -220,27 +221,28 @@ void chirp() {
   #endif
 }
 
-void blink() {
+void blinkLed() {
   stopLedPulsing();
   analogWrite(PIN_LED, LED_MAX);
   #ifdef DEBUG_
   Serial.println("blink");
   #endif
-  shining_ = 1;
+  led_shining_ = 1;
+  led_shine_until_ = millis() + LED_BLINK_DURATION;
 }
 
 void stopLedShining() {
   #ifdef DEBUG_
   Serial.println("LED stop shining ");
   #endif
-  shine_until_ = 0;
-  analogWrite(PIN_LED, LED_MAX);
-  shining_ = 0;
+  led_shine_until_ = 0;
+  analogWrite(PIN_LED, LED_OFF);
+  led_shining_ = 0;
 }
 
 void expireLed() {
-  if (shining_) {
-    if (shine_until_ > 0 && shine_until_ <  millis()) {
+  if (led_shining_) {
+    if (led_shine_until_ > 0 && led_shine_until_ <  millis()) {
       stopLedShining();
     }
     return;
@@ -274,10 +276,6 @@ void expireLed() {
   analogWrite(PIN_LED, led_level_);
 }
 
-boolean is_shining() {
-  return (shine_end_at != 0) && (shine_end_at > millis());
-}
-
 void setup() {
   #ifdef DEBUG_
   Serial.begin(9600);
@@ -289,9 +287,9 @@ void setup() {
   pinMode(PIN_PING_ECHO, INPUT);
   pinMode(PIN_CDS, INPUT);
   for (int i=0; i<4; i++) {
-    digitalWrite(PIN_LED, HIGH);
+    analogWrite(PIN_LED, 120);
     delay(500);
-    digitalWrite(PIN_LED, LOW);
+    analogWrite(PIN_LED, 60);
     delay(200);
   }    
   frontservo.attach(PIN_SERVO_FRONT);
@@ -304,15 +302,29 @@ void setup() {
   steps_since_reversal = 0;
   steps_since_forward = 0;
   steps_since_turn = 0;
-  shine_end_at = 0;
-  start_led_pulsing();
+  led_shining_ = false;
+  startLedPulsing();
   #ifdef DEBUG_
   Serial.println("/setup");
-  #endif 
+  #endif   
 }
-
+int counter = 0;
 void loop() {
+  counter += 1;
+  if (counter == 500) {
+    blinkLed();
+  }
+  if (counter == 1000) {
+    startLedPulsing();
+  }
+  if (counter == 1200) {
+    blinkLed();
+  }
+  if (counter == 1500) {
+    startLedPulsing();
+  }
   periodicRefresh();
+  delay(10);
   return; // testing
   
   if (isTimeToSleep()) {
@@ -388,7 +400,7 @@ void roam() {
       walking_direction = turn;
       steps_since_turn = 0;
       step_seq = 1;
-      blink();
+      blinkLed();
     } else {
       #ifdef DEBUG_
       Serial.println("All clear, going fwd");
@@ -397,7 +409,7 @@ void roam() {
       steps_since_forward = 0;
       step_seq = 1;
       stopLedShining();
-      start_led_pulsing();
+      startLedPulsing();
     }
   }
   // If we're turning, limit how long we turn and then go forwards with the LED pulsing
@@ -409,6 +421,6 @@ void roam() {
     steps_since_forward = 0;
     step_seq = 1;
     stopLedShining();
-    start_led_pulsing();
+    startLedPulsing();
   }
 }
