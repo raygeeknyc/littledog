@@ -8,7 +8,7 @@
  see http://www.insanegiantrobots.com/littledog
  */
 
-#define _NO_DEBUG_
+#define DEBUG_
 #include <Servo.h>
 
 Servo frontservo,backservo;
@@ -20,8 +20,11 @@ const int LEGS_RIGHT_FULL=center+(gait_range/2);
 const byte LEGS_LEFT_PART = center-(gait_range/5);
 const byte LEGS_RIGHT_PART = center+(gait_range/5);
 
-#define SLEEP_INTERVAL 600
+#define SLEEP_INTERVAL 100
 #define WAKE_DUR 10000
+
+#define SLEEP_DURATION 200
+#define SLEEP_TONE 100
 
 #define BEEP_DURATION 700
 #define BEEP_TONE 350
@@ -80,7 +83,8 @@ int walking_direction;
 #define BACKWARDS 1
 #define turn 2
 
-#define THRESHOLD_LIGHT_CHANGE 30
+#define THRESHOLD_LIGHT_CHANGE 15
+#define THRESHOLD_LIGHT_CHANGE_PCT 0.025
 int light_, prev_light_;
 
 #define THRESHOLD_DISTANCE_CHANGED 3
@@ -93,8 +97,15 @@ void setSensorBaseLevels() {
   prev_distance_ = getDistance();
 }
 
+void snore() {
+tone(PIN_SPEAKER, SLEEP_TONE, SLEEP_DURATION);
+}
+
 void sleepUntilWoken() {
   setSensorBaseLevels();
+  snore();
+  startLedPulsing();
+  sleeping_ = true;
   while (sleeping_) {
     delay(SLEEP_INTERVAL);
     periodicRefresh();
@@ -102,6 +113,10 @@ void sleepUntilWoken() {
       wakeUp();
     }
   }
+  setSleepTime();
+}
+
+void setSleepTime() {
   awake_until_ = millis()+WAKE_DUR;
 }
 
@@ -121,11 +136,11 @@ void wakeUp() {
 }
 
 void refreshSensors() {
-  return; // TESTING
   prev_light_ = light_;
-  prev_distance_ = distance_;
   light_ = getLightLevel();
   light_asof_ = millis();
+  return; // testing
+  prev_distance_ = distance_;
   distance_ = getDistance();
   distance_asof_ = millis();
 }
@@ -139,7 +154,7 @@ int getLightLevel() {
     sum += sample;
   }
   sum -= (min + max);
-  return (sum/3);
+  return (sum/(LIGHT_SAMPLES-2));
 }
 
 int getDistance() {
@@ -154,13 +169,34 @@ int getDistance() {
   return (sum/3);
 }
 
+boolean lightLevelChanged() {
+  boolean changed = abs(light_ - prev_light_)> THRESHOLD_LIGHT_CHANGE;
+  #ifdef DEBUG_
+  Serial.print("light: ");
+  Serial.print(prev_light_);
+  Serial.print(" --> ");
+  Serial.print(light_);
+  Serial.print(" ");
+  Serial.print(abs(light_ - prev_light_));
+  Serial.print(" == ");
+  Serial.println(changed?"***CHANGE***":"");
+  #endif
+  return changed;
+}
+
+boolean distanceChanged() {
+    return (abs(distance_ - prev_distance_) > THRESHOLD_DISTANCE_CHANGED);
+}
+    
 boolean  activityDetected() {
-  if (abs(light_ - prev_light_) > THRESHOLD_LIGHT_CHANGE) {
+  if (lightLevelChanged()) {
     return true;
   }
-  if (abs(distance_ - prev_distance_) > THRESHOLD_DISTANCE_CHANGED) {
+  
+  if (distanceChanged()) {
     return true;
   }
+  
   return false;
 }
 
@@ -278,7 +314,7 @@ void expireLed() {
 
 void setup() {
   #ifdef DEBUG_
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("setup");
   #endif 
   pinMode(PIN_LED, OUTPUT);
@@ -286,6 +322,7 @@ void setup() {
   pinMode(PIN_SPEAKER, OUTPUT);
   pinMode(PIN_PING_ECHO, INPUT);
   pinMode(PIN_CDS, INPUT);
+  chirp();
   for (int i=0; i<4; i++) {
     analogWrite(PIN_LED, 120);
     delay(500);
@@ -306,27 +343,18 @@ void setup() {
   startLedPulsing();
   #ifdef DEBUG_
   Serial.println("/setup");
-  #endif   
+  #endif
+  setSleepTime();
 }
-int counter = 0;
 void loop() {
-  counter += 1;
-  if (counter == 500) {
-    blinkLed();
+ /** Testing
+  periodicRefresh(); 
+  if (lightLevelChanged()) {
+    chirp();
   }
-  if (counter == 1000) {
-    startLedPulsing();
-  }
-  if (counter == 1200) {
-    blinkLed();
-  }
-  if (counter == 1500) {
-    startLedPulsing();
-  }
+  return;
+  **/
   periodicRefresh();
-  delay(10);
-  return; // testing
-  
   if (isTimeToSleep()) {
     sleepUntilWoken();
   } else {
@@ -335,6 +363,7 @@ void loop() {
 }
 
 void roam() {
+  return;  // testing
   delay(DELAY_PRE_STEP_MS);
   #ifdef DEBUG_
   Serial.print("walking direction ");
