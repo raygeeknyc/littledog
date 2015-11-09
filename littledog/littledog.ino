@@ -13,7 +13,7 @@
 
 // Adjust these to center your servos
 #define LEG_FRONT_CENTER 85
-#define LEG_REAR_CENTER 90
+#define LEG_REAR_CENTER 92
 // Adjust this to define how far a full step swings the leg
 #define GAIT_RANGE 70
 
@@ -31,12 +31,12 @@ const byte LEGS_REAR_RIGHT_PART = LEG_REAR_CENTER + (GAIT_RANGE / 5);
 
 Servo frontservo, backservo;
 
-// Set this to control how long we raom after activity before going to sleep
-#define WAKE_DURATION 20000
+// Set this to control how long we roam after activity before going to sleep
+#define WAKE_DURATION 61000
 #define SLEEP_INTERVAL 100
 
-#define SNORE_DURATION 200
-#define SNORE_TONE 100
+#define SNORE_DURATION 250
+#define SNORE_TONE 150
 
 #define CHIRP_DURATION 200
 #define CHIRP_TONE 450
@@ -58,7 +58,7 @@ Servo frontservo, backservo;
 #define PIN_SPEAKER 4
 
 #define DELAY_POST_STEP_MS 15
-#define DELAY_PRE_STEP_MS 700
+#define DELAY_PRE_STEP_MS 485
 
 int sleeping_, led_shining_;
 
@@ -103,7 +103,7 @@ int walking_direction_;
 #define BACKWARDS 1
 #define TURNING 2
 
-#define THRESHOLD_LIGHT_CHANGE 200
+#define THRESHOLD_LIGHT_CHANGE 150
 
 int light_, prev_light_;
 
